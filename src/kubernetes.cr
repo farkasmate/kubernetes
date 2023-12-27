@@ -832,16 +832,17 @@ module Kubernetes
 
     class ::Kubernetes::Client
       def {{plural_method_name.id}}(
-        namespace : String? = "default",
+        {% unless cluster_wide %}
+        namespace : String = "default",
+        {% end %}
         # FIXME: Currently this is intended to be a string, but maybe we should
         # make it a Hash/NamedTuple?
         label_selector = nil,
       )
         label_selector = make_label_selector_string(label_selector)
-        namespace &&= "/namespaces/#{namespace}"
         params = URI::Params.new
         params["labelSelector"] = label_selector if label_selector
-        path = "/{{prefix.id}}/{{group.id}}/{{version.id}}#{namespace}/{{name.id}}?#{params}"
+        path = "/{{prefix.id}}/{{group.id}}/{{version.id}}{{cluster_wide ? "".id : "/namespaces/\#{namespace}".id}}/{{name.id}}/#{params}"
         get path do |response|
           case response.status
           when .ok?
@@ -859,9 +860,14 @@ module Kubernetes
         end
       end
 
-      def {{singular_method_name.id}}(name : String, namespace : String = "default", resource_version : String = "")
-        namespace = "/namespaces/#{namespace}"
-        path = "/{{prefix.id}}/{{group.id}}/{{version.id}}#{namespace}/{{name.id}}/#{name}" 
+      def {{singular_method_name.id}}(
+        name : String,
+        {% unless cluster_wide %}
+        namespace : String = "default",
+        {% end %}
+        resource_version : String = "",
+      )
+        path = "/{{prefix.id}}/{{group.id}}/{{version.id}}{{cluster_wide ? "".id : "/namespaces/\#{namespace}".id}}/{{name.id}}/#{name}"
         params = URI::Params{
           "resourceVersion" => resource_version,
         }
